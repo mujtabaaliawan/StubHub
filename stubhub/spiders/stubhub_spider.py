@@ -10,11 +10,14 @@ class StubHub(scrapy.Spider):
         start_urls = [
             'https://www.stubhub.com/melissa-etheridge-nashville-tickets-10-5-2025/event/158435406/'
         ]
-        for url in start_urls:
+        for base_url in start_urls:
             starting_page = 0
             yield scrapy.Request(
-                url=url,
-                meta={"quantity": starting_page},
+                url=base_url,
+                meta={
+                    "base_url": base_url,
+                    "quantity": starting_page
+                },
                 callback=self.parse
             )
 
@@ -40,9 +43,13 @@ class StubHub(scrapy.Spider):
         remaining_items = tickets_data['grid'].get('itemsRemaining')
         if remaining_items and remaining_items > 0:
             quantity += 1
-            next_page_url = f'https://www.stubhub.com/nba-youngboy-portland-tickets-11-11-2025/event/158424197/?quantity={quantity}'
+            base_url = response.meta['base_url']
+            next_page_url = f'{base_url}?quantity={quantity}'
             yield scrapy.Request(
                 url=next_page_url,
-                meta={"quantity": quantity},
+                meta={
+                    "base_url": base_url,
+                    "quantity": quantity
+                },
                 callback=self.parse
             )
