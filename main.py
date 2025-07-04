@@ -19,10 +19,10 @@ def run_spider(spider_cls):
     })
 
     process = CrawlerProcess(settings)
-    print("Starting running scraper")
     process.crawl(spider_cls)
-    print(f"Scraping completed. Check results in {output_filename} and log in {log_filename}")
+    print("Starting running scraper")
     process.start()
+    print(f"Scraping completed. Check results in {output_filename} and log in {log_filename}")
 
 
 if __name__ == '__main__':
