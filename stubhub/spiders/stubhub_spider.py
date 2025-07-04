@@ -1,4 +1,5 @@
 import json
+import math
 import scrapy
 from stubhub.items import StubHubItem
 
@@ -11,23 +12,23 @@ class StubHub(scrapy.Spider):
             'https://www.stubhub.com/melissa-etheridge-nashville-tickets-10-5-2025/event/158435406/'
         ]
         for base_url in start_urls:
-            starting_page = 0
+            current_page = 0
             yield scrapy.Request(
-                url=base_url,
+                url=f'{base_url}?quantity={current_page}',
                 meta={
                     "base_url": base_url,
-                    "quantity": starting_page
+                    "current_page": current_page
                 },
                 callback=self.parse
             )
 
     def parse(self, response, **kwargs):
-        quantity = response.meta["quantity"]
-        item = StubHubItem()
+        current_page = response.meta["current_page"]
         tickets_data = response.css('#index-data ::text').get()
         tickets_data = json.loads(tickets_data)
         tickets = tickets_data['grid']['items']
         for ticket in tickets:
+            item = StubHubItem()
             item['id'] = ticket.get('id')
             item['eventId'] = ticket.get('eventId')
             item['section'] = ticket.get('section')
@@ -40,16 +41,19 @@ class StubHub(scrapy.Spider):
             item['availableTickets'] = ticket.get('availableTickets')
             yield item
 
-        remaining_items = tickets_data['grid'].get('itemsRemaining')
-        if remaining_items and remaining_items > 0:
-            quantity += 1
-            base_url = response.meta['base_url']
-            next_page_url = f'{base_url}?quantity={quantity}'
-            yield scrapy.Request(
-                url=next_page_url,
-                meta={
-                    "base_url": base_url,
-                    "quantity": quantity
-                },
-                callback=self.parse
-            )
+        total_listings = tickets_data.get('totalListings', 0)
+        if total_listings:
+            listings_per_page = 20
+            total_pages = math.ceil(total_listings / listings_per_page)
+            if total_pages and current_page < total_pages:
+                current_page += 1
+                base_url = response.meta['base_url']
+                next_page_url = f'{base_url}?quantity={current_page}'
+                yield scrapy.Request(
+                    url=next_page_url,
+                    meta={
+                        "base_url": base_url,
+                        "current_page": current_page
+                    },
+                    callback=self.parse
+                )
